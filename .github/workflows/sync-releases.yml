@@ -1,0 +1,16 @@
+name: Sync Releases
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # 每 6 小时自动检查一次上游
+  workflow_dispatch: # 允许你手动点击按钮随时触发同步
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync upstream releases
+        uses: jasonwalsh/sync-release-action@v1 # 专门同步 Release 的 Action
+        with:
+          upstream: MHSanaei/3x-ui   # 例如: godotengine/godot
+          token: ${{ secrets.GITHUB_TOKEN }}
