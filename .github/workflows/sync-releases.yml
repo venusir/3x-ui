@@ -13,13 +13,7 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      # 第一步：检出当前仓库代码
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # 完整拉取，确保包含 tags
-
-      # 第二步：通过 API 自动识别上游并同步编译文件和日志
+      # 直接进入核心逻辑，不再使用任何可能过期的第三方或旧版官方公开 Action
       - name: Fetch and Sync Upstream Releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -44,8 +38,8 @@ jobs:
           fi
           echo "上游最新版本为: $LATEST_TAG"
 
-          # 3. 检查本地是否已经存在该 Release
-          if gh release view "$LATEST_TAG" >/dev/null 2>&1; then
+          # 3. 检查自己仓库中是否已经存在该 Release
+          if gh release view "$LATEST_TAG" -R "${{ github.repository }}" >/dev/null 2>&1; then
             echo "检查完毕: 本地已是最新版本 ($LATEST_TAG)，无需同步。"
             exit 0
           fi
@@ -60,13 +54,11 @@ jobs:
           gh api repos/$UPSTREAM_REPO/releases/latest --jq '.name' > title.txt
           gh api repos/$UPSTREAM_REPO/releases/latest --jq '.body' > body.txt
 
-          # 5. 在你的 Fork 仓库中创建对应的 Release 并上传 exe, apk 等文件
-          # 确保本地有对应的 tag 触发（如果没有就本地创建一个临时打上去）
-          git tag "$LATEST_TAG" || true
-          git push origin "$LATEST_TAG" || true
-
+          # 5. 直接在当前 Fork 仓库中创建对应的 Release 并上传文件
+          # 使用 -R 明确指定目标为你自己的仓库，避免依赖本地克隆的 git 状态
           gh release create "$LATEST_TAG" ./upstream_release/* \
+            -R "${{ github.repository }}" \
             -t "$(cat title.txt)" \
             -F body.txt
 
-          echo "🎉 完美同步成功！"
+          echo "🎉 完美同步成功，且未触发任何环境警告！"
